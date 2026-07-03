@@ -375,7 +375,7 @@
           </div>
         </div>
         <div class="field">
-          <label class="field-label">% markup estructural (sobre subtotal variable)</label>
+          <label class="field-label">% markup estructural (sobre costo fijo mensual)</label>
           <div class="field-row">
             <input type="number" id="structural-pct" min="0" max="100" step="1" value="10">
             <span class="unit">%</span>
@@ -420,7 +420,7 @@
             <td class="value" id="r-subtotal-var">$175.00</td>
           </tr>
           <tr>
-            <td colspan="3">Markup estructural (<span id="r-structural-pct">10</span>% × subtotal variable $<span id="r-subtotal-display">175.00</span>)</td>
+            <td colspan="3">Markup estructural (<span id="r-structural-pct">10</span>% × costo fijo mensual $<span id="r-fixed-display">1,000.00</span>)</td>
             <td class="value" id="r-structural-fee">$17.50</td>
           </tr>
           <tr class="subtotal">
@@ -570,7 +570,7 @@
 
       const fixedCost = num('fixed-cost');
       const structuralPct = num('structural-pct');
-      const structuralFee = subtotalVar * (structuralPct / 100);
+      const structuralFee = fixedCost * (structuralPct / 100);
       const totalCost = subtotalVar + structuralFee;
 
       const margin = num('margin');
@@ -585,7 +585,7 @@
 
       // Update DOM
       document.getElementById('r-subtotal-var').textContent = fmt(subtotalVar);
-      document.getElementById('r-subtotal-display').textContent = subtotalVar.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('r-fixed-display').textContent = fixedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       document.getElementById('r-structural-pct').textContent = structuralPct;
       document.getElementById('r-structural-fee').textContent = fmt(structuralFee);
       document.getElementById('r-total-cost').textContent = fmt(totalCost);
