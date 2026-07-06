@@ -29,12 +29,13 @@
       min-height: 100vh;
       line-height: 1.5;
     }
-    .container { max-width: 1200px; margin: 0 auto; }
+    .container { max-width: 1100px; margin: 0 auto; }
     header {
       text-align: center;
       margin-bottom: 32px;
       padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
+      position: relative;
     }
     h1 {
       font-size: 28px;
@@ -46,6 +47,24 @@
       background-clip: text;
     }
     .subtitle { color: var(--text-dim); font-size: 14px; }
+
+    .admin-toggle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      transition: all 0.15s;
+      display: none !important;
+    }
+    body.admin .admin-toggle { display: inline-block !important; }
+    .admin-toggle:hover { color: var(--accent); border-color: var(--accent); }
 
     .grid {
       display: grid;
@@ -133,6 +152,7 @@
       font-size: 13px;
       font-weight: 600;
       transition: all 0.15s;
+      font-family: inherit;
     }
     .preset-btn:hover { border-color: var(--accent); }
     .preset-btn.active {
@@ -154,6 +174,34 @@
       margin-bottom: 20px;
       color: var(--accent);
     }
+
+    /* Public final result — large, prominent */
+    .public-result {
+      text-align: center;
+      padding: 24px 16px 8px;
+    }
+    .public-result .label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    .public-result .price {
+      font-size: 56px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.02em;
+      line-height: 1;
+      margin-bottom: 8px;
+      font-variant-numeric: tabular-nums;
+    }
+    .public-result .per-unit {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+    }
+
     .breakdown-table {
       width: 100%;
       border-collapse: collapse;
@@ -243,20 +291,49 @@
       cursor: pointer;
       font-size: 12px;
       margin-left: 12px;
+      font-family: inherit;
     }
     button.reset-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ===== ADMIN vs PUBLIC ===== */
+    .admin-only { display: none; }
+    body.admin .admin-only { display: block; }
+    body.admin .public-only { display: none; }
+
+    /* discount slider chip */
+    .discount-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(0, 212, 170, 0.1);
+      border: 1px solid rgba(0, 212, 170, 0.3);
+      border-radius: 100px;
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .discount-chip.has-discount {
+      background: rgba(255, 158, 61, 0.1);
+      border-color: rgba(255, 158, 61, 0.3);
+      color: var(--warn);
+    }
   </style>
 </head>
 <body>
+  <!-- Hidden inputs always present (so JS works in both modes) -->
+  <input type="hidden" id="discount" value="0">
+
   <div class="container">
     <header>
+      <button class="admin-toggle" id="admin-toggle" title="Modo admin (Ctrl+Shift+A)">🔧 Admin</button>
       <h1>💎 Calculadora ADA — Paquetes SimpliRoute</h1>
-      <p class="subtitle">Llamadas · WhatsApp · SimpliChat — Cotización dinámica con margen configurable</p>
+      <p class="subtitle">Cotizá tu paquete de Llamadas + WhatsApp + SimpliChat en segundos</p>
     </header>
 
     <div class="warning" id="warning">⚠️ Algún canal está por debajo del mínimo (50 unidades).</div>
 
-    <!-- CONFIGURACIÓN DE CANALES -->
+    <!-- ============ CONFIGURACIÓN DE CANALES ============ -->
     <div class="grid">
       <!-- LLAMADAS -->
       <div class="card">
@@ -279,8 +356,9 @@
             <span class="unit">minutos</span>
           </div>
         </div>
-        <div class="field">
-          <label class="field-label">Costo unitario (peor caso)</label>
+        <!-- ADMIN: costo unitario -->
+        <div class="field admin-only">
+          <label class="field-label">Costo unitario</label>
           <div class="field-row">
             <span class="unit">USD</span>
             <input type="number" id="unit-call" min="0" step="0.01" value="0.50">
@@ -309,8 +387,9 @@
             <span class="unit">conversaciones</span>
           </div>
         </div>
-        <div class="field">
-          <label class="field-label">Costo unitario (peor caso)</label>
+        <!-- ADMIN: costo unitario -->
+        <div class="field admin-only">
+          <label class="field-label">Costo unitario</label>
           <div class="field-row">
             <span class="unit">USD</span>
             <input type="number" id="unit-whatsapp" min="0" step="0.01" value="0.25">
@@ -339,8 +418,9 @@
             <span class="unit">conversaciones</span>
           </div>
         </div>
-        <div class="field">
-          <label class="field-label">Costo unitario (peor caso)</label>
+        <!-- ADMIN: costo unitario -->
+        <div class="field admin-only">
+          <label class="field-label">Costo unitario</label>
           <div class="field-row">
             <span class="unit">USD</span>
             <input type="number" id="unit-simplichat" min="0" step="0.01" value="0.15">
@@ -348,46 +428,63 @@
         </div>
       </div>
 
-      <!-- GLOBALES -->
+      <!-- DESCUENTO (public) -->
       <div class="card">
-        <div class="card-title"><span class="dot global"></span>⚙️ Configuración global
-          <button class="reset-btn" id="reset-btn">Reset defaults</button>
-        </div>
+        <div class="card-title"><span class="dot global"></span>🎁 Descuento comercial</div>
         <div class="field">
-          <label class="field-label">Margen (gross margin sobre precio)</label>
-          <div class="field-row">
-            <input type="number" id="margin" min="0" max="99" step="1" value="85">
-            <span class="unit">%</span>
+          <label class="field-label">Descuento a aplicar <span class="discount-chip" id="discount-chip">0%</span></label>
+          <input type="range" id="discount-slider" min="0" max="50" step="1" value="0" style="width: 100%; accent-color: var(--accent); margin: 8px 0;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); font-family: monospace;">
+            <span>0%</span><span>10%</span><span>20%</span><span>30%</span><span>40%</span><span>50%</span>
           </div>
         </div>
-        <div class="field">
-          <label class="field-label">Descuento comercial</label>
-          <div class="field-row">
-            <input type="number" id="discount" min="0" max="99" step="1" value="0">
-            <span class="unit">%</span>
+        <!-- ADMIN ONLY: configuracion extra -->
+        <div class="admin-only" style="border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px;">
+          <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+            ⚙️ Configuración interna
+            <button class="reset-btn" id="reset-btn">Reset</button>
           </div>
-        </div>
-        <div class="field">
-          <label class="field-label">Costo fijo mensual plataforma (estructural)</label>
-          <div class="field-row">
-            <span class="unit">USD</span>
-            <input type="number" id="fixed-cost" min="0" step="50" value="1000">
+          <div class="field">
+            <label class="field-label">Margen (gross margin sobre precio)</label>
+            <div class="field-row">
+              <input type="number" id="margin" min="0" max="99" step="1" value="85">
+              <span class="unit">%</span>
+            </div>
           </div>
-        </div>
-        <div class="field">
-          <label class="field-label">% markup estructural (sobre costo fijo mensual)</label>
-          <div class="field-row">
-            <input type="number" id="structural-pct" min="0" max="100" step="1" value="10">
-            <span class="unit">%</span>
+          <div class="field">
+            <label class="field-label">Costo fijo mensual plataforma</label>
+            <div class="field-row">
+              <span class="unit">USD</span>
+              <input type="number" id="fixed-cost" min="0" step="50" value="1000">
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">% markup estructural (sobre costo fijo)</label>
+            <div class="field-row">
+              <input type="number" id="structural-pct" min="0" max="100" step="1" value="10">
+              <span class="unit">%</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- RESULTADOS -->
+    <!-- ============ RESULTADOS ============ -->
     <div class="results">
-      <div class="results-title">📋 Cotización</div>
-      <table class="breakdown-table">
+      <div class="results-title">📋 Tu cotización</div>
+
+      <!-- PUBLIC: precio grande + total unidades -->
+      <div class="public-result public-only">
+        <div class="label">Precio final estimado</div>
+        <div class="price" id="r-price-public">1,283.33</div>
+        <div class="per-unit" id="r-per-unit-public">$1.60 por unidad · 800 unidades totales</div>
+        <div style="margin-top: 16px;">
+          <span class="discount-chip" id="discount-chip-result">Sin descuento</span>
+        </div>
+      </div>
+
+      <!-- ADMIN: tabla detallada -->
+      <table class="breakdown-table admin-only">
         <thead>
           <tr>
             <th>Concepto</th>
@@ -421,15 +518,15 @@
           </tr>
           <tr>
             <td colspan="3">Markup estructural (<span id="r-structural-pct">10</span>% × costo fijo mensual $<span id="r-fixed-display">1,000.00</span>)</td>
-            <td class="value" id="r-structural-fee">$17.50</td>
+            <td class="value" id="r-structural-fee">$100.00</td>
           </tr>
           <tr class="subtotal">
             <td colspan="3">Costo interno total</td>
-            <td class="value" id="r-total-cost">$192.50</td>
+            <td class="value" id="r-total-cost">$275.00</td>
           </tr>
           <tr>
             <td colspan="3">Precio con margen <span id="r-margin">85</span>%</td>
-            <td class="value" id="r-price-base">$1,283.33</td>
+            <td class="value" id="r-price-base">$1,833.33</td>
           </tr>
           <tr>
             <td colspan="3">Descuento <span id="r-discount">0</span>%</td>
@@ -437,19 +534,30 @@
           </tr>
           <tr class="total">
             <td colspan="3">💰 PRECIO FINAL</td>
-            <td class="value" id="r-price-final">$1,283.33</td>
+            <td class="value" id="r-price-final">$1,833.33</td>
           </tr>
         </tbody>
       </table>
 
-      <div class="kpis">
+      <div class="kpis public-only">
+        <div class="kpi">
+          <div class="kpi-label">Total unidades</div>
+          <div class="kpi-value dim" id="kpi-total-units-public">800</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Precio / unidad</div>
+          <div class="kpi-value accent" id="kpi-price-per-unit-public">$1.60</div>
+        </div>
+      </div>
+
+      <div class="kpis admin-only">
         <div class="kpi">
           <div class="kpi-label">Total unidades</div>
           <div class="kpi-value dim" id="kpi-total-units">800</div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Costo / unidad</div>
-          <div class="kpi-value dim" id="kpi-cost-per-unit">$0.24</div>
+          <div class="kpi-value dim" id="kpi-cost-per-unit">$0.34</div>
         </div>
         <div class="kpi">
           <div class="kpi-label">Precio / unidad</div>
@@ -457,14 +565,13 @@
         </div>
         <div class="kpi">
           <div class="kpi-label">Ganancia bruta</div>
-          <div class="kpi-value warn" id="kpi-profit">$1,090.83</div>
+          <div class="kpi-value warn" id="kpi-profit">$1,558.33</div>
         </div>
       </div>
     </div>
 
     <div class="footer-note">
-      Estimación interna — los costos unitarios son el peor caso según análisis de Camilo (2 jul 2026).<br>
-      Ajustar costos unitarios si hay data más reciente o tarifas negociadas por volumen.
+      Cotización referencial · Contactanos para confirmar pricing final según tu operación.
     </div>
   </div>
 
@@ -479,7 +586,6 @@
       structuralPct: 10,
     };
 
-    // Active presets (track which preset button is selected per channel)
     const activePreset = { call: 100, whatsapp: 200, simplichat: 500 };
 
     // === Helpers ===
@@ -521,17 +627,36 @@
       });
     }
 
+    // === Discount slider ===
+    const discountSlider = document.getElementById('discount-slider');
+    const discountChip = document.getElementById('discount-chip');
+    const discountChipResult = document.getElementById('discount-chip-result');
+    function syncDiscountFromSlider() {
+      const v = parseInt(discountSlider.value);
+      document.getElementById('discount').value = v;
+      discountChip.textContent = v + '%';
+      discountChip.classList.toggle('has-discount', v > 0);
+      if (v > 0) {
+        discountChipResult.textContent = 'Descuento aplicado: ' + v + '%';
+        discountChipResult.classList.add('has-discount');
+      } else {
+        discountChipResult.textContent = 'Sin descuento';
+        discountChipResult.classList.remove('has-discount');
+      }
+      recalc();
+    }
+    discountSlider.addEventListener('input', syncDiscountFromSlider);
+
     // === Recalc on any input change ===
     document.querySelectorAll('input, select').forEach(el => {
       el.addEventListener('input', () => {
-        // Update preset buttons when qty changes manually
         const m = el.id.match(/^qty-(call|whatsapp|simplichat)$/);
         if (m) updatePresetButtons(m[1]);
         recalc();
       });
     });
 
-    // === Reset ===
+    // === Reset (admin only) ===
     document.getElementById('reset-btn').addEventListener('click', () => {
       document.getElementById('qty-call').value = DEFAULTS.qty.call;
       document.getElementById('qty-whatsapp').value = DEFAULTS.qty.whatsapp;
@@ -541,6 +666,11 @@
       document.getElementById('unit-simplichat').value = DEFAULTS.unit.simplichat;
       document.getElementById('margin').value = DEFAULTS.margin;
       document.getElementById('discount').value = DEFAULTS.discount;
+      discountSlider.value = 0;
+      discountChip.textContent = '0%';
+      discountChip.classList.remove('has-discount');
+      discountChipResult.textContent = 'Sin descuento';
+      discountChipResult.classList.remove('has-discount');
       document.getElementById('fixed-cost').value = DEFAULTS.fixedCost;
       document.getElementById('structural-pct').value = DEFAULTS.structuralPct;
       ['call', 'whatsapp', 'simplichat'].forEach(updatePresetButtons);
@@ -563,6 +693,7 @@
 
         if (qty > 0 && qty < 50) belowMin = true;
 
+        // ADMIN-only updates
         document.getElementById(`r-qty-${ch}`).textContent = qty;
         document.getElementById(`r-unit-${ch}`).textContent = fmt(unit);
         document.getElementById(`r-var-${ch}`).textContent = fmt(sub);
@@ -574,7 +705,7 @@
       const totalCost = subtotalVar + structuralFee;
 
       const margin = num('margin');
-      const marginFrac = (100 - margin) / 100; // price = cost / (1 - margin)
+      const marginFrac = (100 - margin) / 100;
       const priceBase = marginFrac > 0 ? totalCost / marginFrac : 0;
 
       const discount = num('discount');
@@ -582,8 +713,9 @@
       const priceFinal = priceBase - discountAmt;
 
       const profit = priceFinal - totalCost;
+      const pricePerUnit = totalUnits > 0 ? priceFinal / totalUnits : 0;
 
-      // Update DOM
+      // ADMIN DOM updates
       document.getElementById('r-subtotal-var').textContent = fmt(subtotalVar);
       document.getElementById('r-fixed-display').textContent = fixedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       document.getElementById('r-structural-pct').textContent = structuralPct;
@@ -594,19 +726,58 @@
       document.getElementById('r-discount').textContent = discount;
       document.getElementById('r-discount-amt').textContent = discountAmt > 0 ? '-' + fmt(discountAmt) : fmt(0);
       document.getElementById('r-price-final').textContent = fmt(priceFinal);
-
       document.getElementById('kpi-total-units').textContent = totalUnits.toLocaleString('en-US');
       document.getElementById('kpi-cost-per-unit').textContent = totalUnits > 0 ? fmt(totalCost / totalUnits) : '$0.00';
-      document.getElementById('kpi-price-per-unit').textContent = totalUnits > 0 ? fmt(priceFinal / totalUnits) : '$0.00';
+      document.getElementById('kpi-price-per-unit').textContent = totalUnits > 0 ? fmt(pricePerUnit) : '$0.00';
       document.getElementById('kpi-profit').textContent = fmt(profit);
 
-      // Warning if any channel below min (50) — but only show if there's any qty
+      // PUBLIC DOM updates
+      document.getElementById('r-price-public').textContent = fmt(priceFinal);
+      document.getElementById('r-per-unit-public').innerHTML =
+        `${fmt(pricePerUnit)} por unidad · <strong>${totalUnits.toLocaleString('en-US')}</strong> unidades totales`;
+      document.getElementById('kpi-total-units-public').textContent = totalUnits.toLocaleString('en-US');
+      document.getElementById('kpi-price-per-unit-public').textContent = fmt(pricePerUnit);
+
+      // Warning
       const warningEl = document.getElementById('warning');
       if (belowMin) warningEl.classList.add('show');
       else warningEl.classList.remove('show');
     }
 
-    // === Init ===
+    // === ADMIN TOGGLE ===
+    function applyAdminMode(isAdmin) {
+      document.body.classList.toggle('admin', isAdmin);
+      const btn = document.getElementById('admin-toggle');
+      btn.textContent = isAdmin ? '👁️ Vista pública' : '🔧 Admin';
+      try { localStorage.setItem('ada_calc_admin', isAdmin ? '1' : '0'); } catch (e) {}
+      // Show/hide admin-toggle in public mode
+      btn.style.display = isAdmin ? 'inline-block' : 'inline-block'; // always visible
+    }
+
+    // Init from URL param ?admin=1 OR localStorage
+    function initAdminMode() {
+      const params = new URLSearchParams(window.location.search);
+      let isAdmin = params.get('admin') === '1';
+      if (!isAdmin) {
+        try { isAdmin = localStorage.getItem('ada_calc_admin') === '1'; } catch (e) {}
+      }
+      applyAdminMode(isAdmin);
+    }
+
+    // Toggle button
+    document.getElementById('admin-toggle').addEventListener('click', () => {
+      applyAdminMode(!document.body.classList.contains('admin'));
+    });
+
+    // Keyboard shortcut: Ctrl+Shift+A
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        applyAdminMode(!document.body.classList.contains('admin'));
+      }
+    });
+
+    initAdminMode();
     ['call', 'whatsapp', 'simplichat'].forEach(updatePresetButtons);
     recalc();
   </script>
